@@ -228,10 +228,10 @@ class WSF {
         // this request doesn't really return anything useful
         $this->c->postRequest($toPost, $accountHolderPaymentURL);
         sleep(3);
+        // get order confirmation # and reservation #
         $orderConfXPath = $this->c->getXPath(self::orderConfirmationURL);
         $orderNumNL = $orderConfXPath->query("//strong[contains(text(), 'Confirmation#:')]/..");
-        $orderNum = '';
-        $resNum = '';
+        $orderNum = $resNum = '';
         if ($orderNumNL->length < 1) {
             echo "\nNo order number found!\n";
         }
@@ -283,12 +283,14 @@ class WSF {
         $toPost['ctl00$MainContent$rptOrderList$ctl01$hfItemReservationID'] = $reservationID;
         $toPost['__ASYNCPOST'] = 'true';
         $aspResponse = $this->c->postRequest($toPost, self::reservationsURL);
+        // this response contains some HTML and then some variables of the
+        // form:
+        // |Var_Name|Var_Value|...
         $startRelevant = strpos($aspResponse, '|0|hiddenField|');
         if ($startRelevant === false) {
             echo "\n\nInvalid response!";
             return false;
         }
-        
         $aspString = trim(substr($aspResponse, $startRelevant));
         $respParts = explode('|', $aspString);
         $vsKey = array_search('__VIEWSTATE', $respParts);
@@ -304,11 +306,7 @@ class WSF {
         $toPost = $formValues;
         $toPost['__VIEWSTATE'] = $respParts[$vsKey + 1];
         $toPost['__EVENTVALIDATION'] = $respParts[$evKey + 1];
-        // stays the same
-        // previous page
-        // 
-        // eventvalidation needs updated
-        // view state
+        // eventvalidation,viewstate needs updated
         $toPost['__EVENTTARGET'] = 'ctl00$MainContent$linkBtnFinal';
         $toPost['ctl00$MainContent$smOverview'] = 'ctl00$MainContent$upOverview|ctl00$MainContent$linkBtnFinal';
         $toPost['__EVENTARGUMENT'] = '';
@@ -332,16 +330,17 @@ class WSF {
             return false;
         }
         $cancelConfirmationNumber = $strongNL->item(0)->nodeValue;
-        $cancelConfirmationNumber = str_replace('CANCELLATION REFERENCE#', '', $cancelConfirmationNumber);
-        $cancelConfirmationNumber = str_replace(':', '', $cancelConfirmationNumber);
+        $cancelConfirmationNumber = str_replace('CANCELLATION REFERENCE#:', '', $cancelConfirmationNumber);
         $cancelConfirmationNumber = str_replace("\xA0", '', $cancelConfirmationNumber);
         $cancelConfirmationNumber = str_replace("\xC2", '', $cancelConfirmationNumber);
         $cancelConfirmationNumber = trim($cancelConfirmationNumber);
         return $cancelConfirmationNumber;
         
     }
+    
+    
     /*
-     *  utility functions
+     *  utility methods
      */
     
     /*
@@ -349,6 +348,12 @@ class WSF {
      * hidden form input values.
      *
      * @param DOMXPath object $xpath XPath of page from which to retrieve values
+     * @return array
+     *              array['__EVENTARGUMENT']
+     *              array['__EVENTTARGET']
+     *              array['__EVENTVALIDATION']
+     *              array['__VIEWSTATE']
+     *              array['__PREVIOUSPAGE']
      */
     private function getFormValues($xpath) {
     
