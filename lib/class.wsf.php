@@ -1,11 +1,4 @@
 <?php
-error_reporting(E_ALL ^ E_NOTICE);
-ini_set('display_errors',1);
-
-if (!class_exists('Curl', false)) {
-    require_once __DIR__ . "/class.curl.php";
-}
-
 /**
  * Class for interacting with WSF pages
  */
